@@ -32,18 +32,36 @@ button, select { font: inherit; }
 h1 { margin: 0 0 4px; font-size: clamp(26px, 4.6vw, 38px); }
 header p { margin: 0; color: #68758a; font-size: 16px; }
 
-.tabs {
+.tabs, .tunerMode {
   display: grid; grid-template-columns: 1fr 1fr;
-  gap: 8px; margin: 24px 0 18px;
-  padding: 6px; border-radius: 18px; background: #edf1f7;
+  gap: 8px; padding: 6px; border-radius: 18px; background: #edf1f7;
 }
-.tab {
+.tabs { margin: 24px 0 18px; }
+.tunerMode { margin-bottom: 14px; }
+.tab, .miniTab {
   border: 0; border-radius: 13px; padding: 14px;
   background: transparent; color: #5e6a7c;
-  font-size: 18px; font-weight: 800;
+  font-weight: 800;
 }
-.tab.active { background: white; color: #1d4ed8; box-shadow: 0 4px 14px rgba(40,60,90,.10); }
-.hidden { display: none; }
+.tab { font-size: 18px; }
+.miniTab { font-size: 16px; }
+.tab.active, .miniTab.active {
+  background: white; color: #1d4ed8;
+  box-shadow: 0 4px 14px rgba(40,60,90,.10);
+}
+.hidden { display: none !important; }
+
+.targetSelector {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 14px; margin-bottom: 14px; padding: 14px 18px;
+  border-radius: 18px; background: #fff8e7; border: 1px solid #f1dfad;
+}
+.targetSelector label { font-size: 17px; font-weight: 850; color: #604b18; }
+.targetSelector select {
+  min-width: 240px; padding: 11px 14px; border-radius: 12px;
+  border: 1px solid #d7c88f; background: white; color: #273449;
+  font-weight: 750;
+}
 
 .heroCard, .tunerCard {
   text-align: center;
@@ -106,6 +124,7 @@ header p { margin: 0; color: #68758a; font-size: 16px; }
 .tuneMessage.good { background: #dcfce7; color: #166534; }
 .tuneMessage.low { background: #dbeafe; color: #1d4ed8; }
 .tuneMessage.high { background: #ffedd5; color: #c2410c; }
+.tuneMessage.far { background: #f3e8ff; color: #7e22ce; }
 .tunerDetails {
   margin-top: 17px; display: flex; justify-content: center; gap: 28px;
   color: #657184; font-size: 16px; flex-wrap: wrap;
@@ -145,7 +164,7 @@ header p { margin: 0; color: #68758a; font-size: 16px; }
   .logo { width: 50px; height: 50px; flex-basis: 50px; border-radius: 15px; }
   .controls { grid-template-columns: 1fr 1fr; }
   .controls .primary { grid-column: 1 / -1; }
-  .referenceSetting { align-items: stretch; flex-direction: column; }
-  .referenceSetting select { width: 100%; min-width: 0; }
+  .referenceSetting, .targetSelector { align-items: stretch; flex-direction: column; }
+  .referenceSetting select, .targetSelector select { width: 100%; min-width: 0; }
   .tip { flex-direction: column; gap: 3px; }
 }

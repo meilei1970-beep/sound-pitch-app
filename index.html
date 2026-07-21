@@ -48,8 +48,18 @@
     </section>
 
     <section id="tunerPanel" class="panel hidden">
+      <div class="tunerMode" aria-label="調音方式">
+        <button id="autoTuneMode" class="miniTab active" type="button">自動辨識</button>
+        <button id="targetTuneMode" class="miniTab" type="button">指定目標音</button>
+      </div>
+
+      <div id="targetSelector" class="targetSelector hidden">
+        <label for="targetNoteSelect">要調整的音</label>
+        <select id="targetNoteSelect"></select>
+      </div>
+
       <div class="tunerCard">
-        <div class="label">最接近的音</div>
+        <div id="tunerLabel" class="label">最接近的音</div>
         <div id="tunerNote" class="tunerNote">--</div>
         <div id="tunerSolfege" class="tunerSolfege">等待聲音</div>
 
@@ -88,7 +98,7 @@
 
     <aside class="tip">
       <strong>使用小提醒</strong>
-      <span>靠近樂器，發出一個持續且清楚的聲音。環境太吵時，數字可能跳動。</span>
+      <span>指定目標音時，請先選音名，再發出接近該音的持續聲音。</span>
     </aside>
   </main>
 

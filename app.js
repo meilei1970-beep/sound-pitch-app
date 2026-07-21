@@ -5,9 +5,13 @@ const els = {
   status: $("status"), min: $("minFreq"), avg: $("avgFreq"), max: $("maxFreq"),
   tunerNote: $("tunerNote"), tunerSolfege: $("tunerSolfege"), tunerFreq: $("tunerFreq"),
   targetFreq: $("targetFreq"), needle: $("needle"), tuneMessage: $("tuneMessage"),
+  tunerLabel: $("tunerLabel"),
   start: $("startBtn"), stop: $("stopBtn"), reset: $("resetBtn"),
   measureTab: $("measureTab"), tunerTab: $("tunerTab"),
-  measurePanel: $("measurePanel"), tunerPanel: $("tunerPanel"), a4Select: $("a4Select")
+  measurePanel: $("measurePanel"), tunerPanel: $("tunerPanel"),
+  autoTuneMode: $("autoTuneMode"), targetTuneMode: $("targetTuneMode"),
+  targetSelector: $("targetSelector"), targetNoteSelect: $("targetNoteSelect"),
+  a4Select: $("a4Select")
 };
 
 let audioContext = null;
@@ -17,6 +21,7 @@ let buffer = null;
 let rafId = null;
 let isRunning = false;
 let mode = "measure";
+let tunerMode = "auto";
 let readings = [];
 let recentStable = [];
 let lastDisplayed = null;
@@ -28,19 +33,37 @@ function getA4() {
   return Number(els.a4Select.value || 440);
 }
 
-function getNoteInfo(freq) {
-  const a4 = getA4();
-  const exactMidi = 69 + 12 * Math.log2(freq / a4);
-  const midi = Math.round(exactMidi);
+function midiToInfo(midi) {
   const index = ((midi % 12) + 12) % 12;
   const octave = Math.floor(midi / 12) - 1;
-  const target = a4 * Math.pow(2, (midi - 69) / 12);
-  const cents = 1200 * Math.log2(freq / target);
-  return {
-    midi, index, octave, target, cents,
-    note: NOTE_NAMES[index],
-    solfege: SOLFEGE[index]
-  };
+  const target = getA4() * Math.pow(2, (midi - 69) / 12);
+  return { midi, index, octave, target, note: NOTE_NAMES[index], solfege: SOLFEGE[index] };
+}
+
+function getNearestNoteInfo(freq) {
+  const exactMidi = 69 + 12 * Math.log2(freq / getA4());
+  const midi = Math.round(exactMidi);
+  const info = midiToInfo(midi);
+  info.cents = 1200 * Math.log2(freq / info.target);
+  return info;
+}
+
+function populateTargetNotes() {
+  const previous = els.targetNoteSelect.value || "60";
+  els.targetNoteSelect.innerHTML = "";
+  // C3 至 C6，適合常見課堂樂器。
+  for (let midi = 48; midi <= 84; midi++) {
+    const info = midiToInfo(midi);
+    const option = document.createElement("option");
+    option.value = String(midi);
+    option.textContent = `${info.note}${info.octave}／${info.solfege}　${info.target.toFixed(1)} Hz`;
+    els.targetNoteSelect.appendChild(option);
+  }
+  els.targetNoteSelect.value = [...els.targetNoteSelect.options].some(o => o.value === previous) ? previous : "60";
+}
+
+function getSelectedTargetInfo() {
+  return midiToInfo(Number(els.targetNoteSelect.value || 60));
 }
 
 function classifyPitch(freq) {
@@ -80,6 +103,8 @@ function resetDisplay() {
   els.needle.style.left = "50%";
   els.tuneMessage.className = "tuneMessage neutral";
   els.tuneMessage.textContent = "請發出持續的單一聲音";
+
+  if (tunerMode === "target") showSelectedTarget();
 }
 
 function setMode(nextMode) {
@@ -90,6 +115,23 @@ function setMode(nextMode) {
   els.measureTab.classList.toggle("active", measure);
   els.tunerTab.classList.toggle("active", !measure);
   els.status.textContent = isRunning ? "正在測量" : "選擇功能後，按下開始";
+}
+
+function setTunerMode(nextMode) {
+  tunerMode = nextMode;
+  const isAuto = tunerMode === "auto";
+  els.autoTuneMode.classList.toggle("active", isAuto);
+  els.targetTuneMode.classList.toggle("active", !isAuto);
+  els.targetSelector.classList.toggle("hidden", isAuto);
+  els.tunerLabel.textContent = isAuto ? "最接近的音" : "指定的目標音";
+  resetDisplay();
+}
+
+function showSelectedTarget() {
+  const target = getSelectedTargetInfo();
+  els.tunerNote.textContent = `${target.note}${target.octave}`;
+  els.tunerSolfege.textContent = target.solfege;
+  els.targetFreq.textContent = `${target.target.toFixed(1)} Hz`;
 }
 
 function autoCorrelate(data, sampleRate) {
@@ -143,7 +185,7 @@ function autoCorrelate(data, sampleRate) {
 }
 
 function updateMeasure(freq) {
-  const info = getNoteInfo(freq);
+  const info = getNearestNoteInfo(freq);
 
   if (lastDisplayed !== null) {
     const delta = freq - lastDisplayed;
@@ -163,18 +205,28 @@ function updateMeasure(freq) {
 }
 
 function updateTuner(freq) {
-  const info = getNoteInfo(freq);
-  const clamped = Math.max(-50, Math.min(50, info.cents));
-  const left = 50 + clamped;
-  els.needle.style.left = `${left}%`;
+  let info;
+  if (tunerMode === "auto") {
+    info = getNearestNoteInfo(freq);
+    els.tunerNote.textContent = `${info.note}${info.octave}`;
+    els.tunerSolfege.textContent = info.solfege;
+  } else {
+    info = getSelectedTargetInfo();
+    info.cents = 1200 * Math.log2(freq / info.target);
+    els.tunerNote.textContent = `${info.note}${info.octave}`;
+    els.tunerSolfege.textContent = info.solfege;
+  }
 
-  els.tunerNote.textContent = `${info.note}${info.octave}`;
-  els.tunerSolfege.textContent = info.solfege;
+  const clamped = Math.max(-50, Math.min(50, info.cents));
+  els.needle.style.left = `${50 + clamped}%`;
   els.tunerFreq.textContent = `${freq.toFixed(1)} Hz`;
   els.targetFreq.textContent = `${info.target.toFixed(1)} Hz`;
 
   const abs = Math.abs(info.cents);
-  if (abs <= 5) {
+  if (tunerMode === "target" && abs > 100) {
+    els.tuneMessage.className = "tuneMessage far";
+    els.tuneMessage.textContent = info.cents < 0 ? "音差很多，請明顯調高" : "音差很多，請明顯調低";
+  } else if (abs <= 5) {
     els.tuneMessage.className = "tuneMessage good";
     els.tuneMessage.textContent = "✓ 音準了";
   } else if (info.cents < 0) {
@@ -263,16 +315,24 @@ async function stopMeasurement() {
   analyser = null;
   els.start.disabled = false;
   els.stop.disabled = true;
-  els.status.textContent = readings.length ? "測量已停止" : "已停止";
+  els.status.textContent = "已停止";
 }
 
 els.measureTab.addEventListener("click", () => setMode("measure"));
 els.tunerTab.addEventListener("click", () => setMode("tuner"));
+els.autoTuneMode.addEventListener("click", () => setTunerMode("auto"));
+els.targetTuneMode.addEventListener("click", () => setTunerMode("target"));
+els.targetNoteSelect.addEventListener("change", resetDisplay);
 els.start.addEventListener("click", startMeasurement);
 els.stop.addEventListener("click", stopMeasurement);
 els.reset.addEventListener("click", resetDisplay);
-els.a4Select.addEventListener("change", resetDisplay);
+els.a4Select.addEventListener("change", () => {
+  populateTargetNotes();
+  resetDisplay();
+});
 window.addEventListener("pagehide", stopMeasurement);
+
+populateTargetNotes();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(console.error));

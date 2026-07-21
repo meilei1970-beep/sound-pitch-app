@@ -1,4 +1,4 @@
-const CACHE = "pitch-tuner-v2";
+const CACHE = "pitch-tuner-v3";
 const FILES = ["./", "./index.html", "./style.css", "./app.js", "./manifest.webmanifest", "./icon.svg"];
 self.addEventListener("install", event => {
   self.skipWaiting();
