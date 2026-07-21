@@ -1,11 +1,11 @@
 {
-  "name": "聲音高低測量器",
-  "short_name": "聲音高低",
+  "name": "聲音高低與調音器",
+  "short_name": "聲音與調音",
   "lang": "zh-Hant",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#f5f7fb",
-  "theme_color": "#ffffff",
+  "background_color": "#eef4ff",
+  "theme_color": "#eef4ff",
   "icons": [
     {
       "src": "icon.svg",

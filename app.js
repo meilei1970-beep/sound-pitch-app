@@ -1,16 +1,14 @@
 const $ = (id) => document.getElementById(id);
 
-const frequencyEl = $("frequency");
-const noteEl = $("note");
-const directionEl = $("direction");
-const levelEl = $("level");
-const statusEl = $("status");
-const minEl = $("minFreq");
-const avgEl = $("avgFreq");
-const maxEl = $("maxFreq");
-const startBtn = $("startBtn");
-const stopBtn = $("stopBtn");
-const resetBtn = $("resetBtn");
+const els = {
+  frequency: $("frequency"), note: $("note"), direction: $("direction"), level: $("level"),
+  status: $("status"), min: $("minFreq"), avg: $("avgFreq"), max: $("maxFreq"),
+  tunerNote: $("tunerNote"), tunerSolfege: $("tunerSolfege"), tunerFreq: $("tunerFreq"),
+  targetFreq: $("targetFreq"), needle: $("needle"), tuneMessage: $("tuneMessage"),
+  start: $("startBtn"), stop: $("stopBtn"), reset: $("resetBtn"),
+  measureTab: $("measureTab"), tunerTab: $("tunerTab"),
+  measurePanel: $("measurePanel"), tunerPanel: $("tunerPanel"), a4Select: $("a4Select")
+};
 
 let audioContext = null;
 let analyser = null;
@@ -18,6 +16,7 @@ let stream = null;
 let buffer = null;
 let rafId = null;
 let isRunning = false;
+let mode = "measure";
 let readings = [];
 let recentStable = [];
 let lastDisplayed = null;
@@ -25,11 +24,23 @@ let lastDisplayed = null;
 const NOTE_NAMES = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
 const SOLFEGE = ["Do", "Do♯", "Re", "Re♯", "Mi", "Fa", "Fa♯", "Sol", "Sol♯", "La", "La♯", "Si"];
 
-function frequencyToNote(freq) {
-  const midi = Math.round(69 + 12 * Math.log2(freq / 440));
+function getA4() {
+  return Number(els.a4Select.value || 440);
+}
+
+function getNoteInfo(freq) {
+  const a4 = getA4();
+  const exactMidi = 69 + 12 * Math.log2(freq / a4);
+  const midi = Math.round(exactMidi);
   const index = ((midi % 12) + 12) % 12;
   const octave = Math.floor(midi / 12) - 1;
-  return `${NOTE_NAMES[index]}${octave}／${SOLFEGE[index]}`;
+  const target = a4 * Math.pow(2, (midi - 69) / 12);
+  const cents = 1200 * Math.log2(freq / target);
+  return {
+    midi, index, octave, target, cents,
+    note: NOTE_NAMES[index],
+    solfege: SOLFEGE[index]
+  };
 }
 
 function classifyPitch(freq) {
@@ -40,26 +51,45 @@ function classifyPitch(freq) {
 
 function updateStats() {
   if (!readings.length) {
-    minEl.textContent = avgEl.textContent = maxEl.textContent = "--";
+    els.min.textContent = els.avg.textContent = els.max.textContent = "--";
     return;
   }
   const min = Math.min(...readings);
   const max = Math.max(...readings);
   const avg = readings.reduce((a, b) => a + b, 0) / readings.length;
-  minEl.textContent = Math.round(min);
-  avgEl.textContent = Math.round(avg);
-  maxEl.textContent = Math.round(max);
+  els.min.textContent = Math.round(min);
+  els.avg.textContent = Math.round(avg);
+  els.max.textContent = Math.round(max);
 }
 
 function resetDisplay() {
   readings = [];
   recentStable = [];
   lastDisplayed = null;
-  frequencyEl.innerHTML = '-- <span>Hz</span>';
-  noteEl.textContent = "等待聲音";
-  directionEl.textContent = "●";
-  levelEl.textContent = "尚未判斷";
+
+  els.frequency.innerHTML = '-- <span>Hz</span>';
+  els.note.textContent = "等待聲音";
+  els.direction.textContent = "●";
+  els.level.textContent = "尚未判斷";
   updateStats();
+
+  els.tunerNote.textContent = "--";
+  els.tunerSolfege.textContent = "等待聲音";
+  els.tunerFreq.textContent = "-- Hz";
+  els.targetFreq.textContent = "-- Hz";
+  els.needle.style.left = "50%";
+  els.tuneMessage.className = "tuneMessage neutral";
+  els.tuneMessage.textContent = "請發出持續的單一聲音";
+}
+
+function setMode(nextMode) {
+  mode = nextMode;
+  const measure = mode === "measure";
+  els.measurePanel.classList.toggle("hidden", !measure);
+  els.tunerPanel.classList.toggle("hidden", measure);
+  els.measureTab.classList.toggle("active", measure);
+  els.tunerTab.classList.toggle("active", !measure);
+  els.status.textContent = isRunning ? "正在測量" : "選擇功能後，按下開始";
 }
 
 function autoCorrelate(data, sampleRate) {
@@ -68,8 +98,7 @@ function autoCorrelate(data, sampleRate) {
   rms = Math.sqrt(rms / data.length);
   if (rms < 0.012) return -1;
 
-  let start = 0;
-  let end = data.length - 1;
+  let start = 0, end = data.length - 1;
   const threshold = 0.18;
   for (let i = 0; i < data.length / 2; i++) {
     if (Math.abs(data[i]) < threshold) { start = i; break; }
@@ -81,6 +110,7 @@ function autoCorrelate(data, sampleRate) {
   const sliced = data.slice(start, end);
   const size = sliced.length;
   const correlations = new Float32Array(size);
+
   for (let lag = 0; lag < size; lag++) {
     let sum = 0;
     for (let i = 0; i < size - lag; i++) sum += sliced[i] * sliced[i + lag];
@@ -90,8 +120,7 @@ function autoCorrelate(data, sampleRate) {
   let dip = 0;
   while (dip + 1 < size && correlations[dip] > correlations[dip + 1]) dip++;
 
-  let bestLag = -1;
-  let bestValue = -Infinity;
+  let bestLag = -1, bestValue = -Infinity;
   for (let lag = dip; lag < size; lag++) {
     if (correlations[lag] > bestValue) {
       bestValue = correlations[lag];
@@ -110,12 +139,56 @@ function autoCorrelate(data, sampleRate) {
   }
 
   const frequency = sampleRate / refinedLag;
-  if (frequency < 60 || frequency > 2000) return -1;
-  return frequency;
+  return (frequency >= 60 && frequency <= 2000) ? frequency : -1;
+}
+
+function updateMeasure(freq) {
+  const info = getNoteInfo(freq);
+
+  if (lastDisplayed !== null) {
+    const delta = freq - lastDisplayed;
+    els.direction.textContent = Math.abs(delta) < 3 ? "→" : (delta > 0 ? "↑" : "↓");
+  } else {
+    els.direction.textContent = "→";
+  }
+
+  lastDisplayed = freq;
+  readings.push(freq);
+  if (readings.length > 600) readings.shift();
+
+  els.frequency.innerHTML = `${Math.round(freq)} <span>Hz</span>`;
+  els.note.textContent = `${info.note}${info.octave}／${info.solfege}`;
+  els.level.textContent = classifyPitch(freq);
+  updateStats();
+}
+
+function updateTuner(freq) {
+  const info = getNoteInfo(freq);
+  const clamped = Math.max(-50, Math.min(50, info.cents));
+  const left = 50 + clamped;
+  els.needle.style.left = `${left}%`;
+
+  els.tunerNote.textContent = `${info.note}${info.octave}`;
+  els.tunerSolfege.textContent = info.solfege;
+  els.tunerFreq.textContent = `${freq.toFixed(1)} Hz`;
+  els.targetFreq.textContent = `${info.target.toFixed(1)} Hz`;
+
+  const abs = Math.abs(info.cents);
+  if (abs <= 5) {
+    els.tuneMessage.className = "tuneMessage good";
+    els.tuneMessage.textContent = "✓ 音準了";
+  } else if (info.cents < 0) {
+    els.tuneMessage.className = "tuneMessage low";
+    els.tuneMessage.textContent = "↑ 音太低，請調高";
+  } else {
+    els.tuneMessage.className = "tuneMessage high";
+    els.tuneMessage.textContent = "↓ 音太高，請調低";
+  }
 }
 
 function drawLoop() {
   if (!isRunning) return;
+
   analyser.getFloatTimeDomainData(buffer);
   const rawFreq = autoCorrelate(buffer, audioContext.sampleRate);
 
@@ -125,28 +198,14 @@ function drawLoop() {
 
     if (recentStable.length >= 3) {
       const sorted = [...recentStable].sort((a, b) => a - b);
-      const stableFreq = sorted[Math.floor(sorted.length / 2)];
+      const freq = sorted[Math.floor(sorted.length / 2)];
 
-      if (lastDisplayed !== null) {
-        const delta = stableFreq - lastDisplayed;
-        if (Math.abs(delta) < 3) directionEl.textContent = "→";
-        else directionEl.textContent = delta > 0 ? "↑" : "↓";
-      } else {
-        directionEl.textContent = "→";
-      }
-
-      lastDisplayed = stableFreq;
-      readings.push(stableFreq);
-      if (readings.length > 600) readings.shift();
-
-      frequencyEl.innerHTML = `${Math.round(stableFreq)} <span>Hz</span>`;
-      noteEl.textContent = frequencyToNote(stableFreq);
-      levelEl.textContent = classifyPitch(stableFreq);
-      statusEl.textContent = "正在測量";
-      updateStats();
+      els.status.textContent = "正在測量";
+      if (mode === "measure") updateMeasure(freq);
+      else updateTuner(freq);
     }
   } else {
-    statusEl.textContent = "請發出較清楚、持續的聲音";
+    els.status.textContent = "請發出較清楚、持續的聲音";
   }
 
   rafId = requestAnimationFrame(drawLoop);
@@ -154,6 +213,11 @@ function drawLoop() {
 
 async function startMeasurement() {
   if (isRunning) return;
+
+  if (!navigator.mediaDevices?.getUserMedia) {
+    alert("此瀏覽器無法使用麥克風。請使用 Safari 或 Chrome，並確認網址為 HTTPS。");
+    return;
+  }
 
   try {
     stream = await navigator.mediaDevices.getUserMedia({
@@ -177,14 +241,14 @@ async function startMeasurement() {
 
     buffer = new Float32Array(analyser.fftSize);
     isRunning = true;
-    startBtn.disabled = true;
-    stopBtn.disabled = false;
-    statusEl.textContent = "正在測量";
+    els.start.disabled = true;
+    els.stop.disabled = false;
+    els.status.textContent = "正在測量";
     drawLoop();
   } catch (error) {
     console.error(error);
-    statusEl.textContent = "無法使用麥克風，請在 Safari 設定中允許權限";
-    alert("請允許此網站使用麥克風，再重新按「開始測量」。");
+    els.status.textContent = "無法使用麥克風";
+    alert("請允許此網站使用麥克風，再重新按「開始」。");
   }
 }
 
@@ -197,14 +261,17 @@ async function stopMeasurement() {
   stream = null;
   audioContext = null;
   analyser = null;
-  startBtn.disabled = false;
-  stopBtn.disabled = true;
-  statusEl.textContent = readings.length ? "測量已停止" : "按「開始測量」，再發出一個持續的聲音";
+  els.start.disabled = false;
+  els.stop.disabled = true;
+  els.status.textContent = readings.length ? "測量已停止" : "已停止";
 }
 
-startBtn.addEventListener("click", startMeasurement);
-stopBtn.addEventListener("click", stopMeasurement);
-resetBtn.addEventListener("click", resetDisplay);
+els.measureTab.addEventListener("click", () => setMode("measure"));
+els.tunerTab.addEventListener("click", () => setMode("tuner"));
+els.start.addEventListener("click", startMeasurement);
+els.stop.addEventListener("click", stopMeasurement);
+els.reset.addEventListener("click", resetDisplay);
+els.a4Select.addEventListener("change", resetDisplay);
 window.addEventListener("pagehide", stopMeasurement);
 
 if ("serviceWorker" in navigator) {

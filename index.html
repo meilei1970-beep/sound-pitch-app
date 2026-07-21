@@ -3,42 +3,93 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#ffffff" />
+  <meta name="theme-color" content="#eef4ff" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="聲音高低" />
+  <meta name="apple-mobile-web-app-title" content="聲音與調音" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="apple-touch-icon" href="icon.svg" />
   <link rel="stylesheet" href="style.css" />
-  <title>聲音高低測量器</title>
+  <title>聲音高低與調音器</title>
 </head>
 <body>
   <main class="app">
     <header>
-      <h1>聲音高低測量器</h1>
-      <p id="status">按「開始測量」，再發出一個持續的聲音</p>
+      <div class="titleRow">
+        <div class="logo" aria-hidden="true">♪</div>
+        <div>
+          <h1>聲音高低與調音器</h1>
+          <p id="status">選擇功能後，按下開始</p>
+        </div>
+      </div>
     </header>
 
-    <section class="meter" aria-live="polite">
-      <div id="frequency" class="frequency">-- <span>Hz</span></div>
-      <div id="note" class="note">等待聲音</div>
-      <div id="direction" class="direction">●</div>
-      <div id="level" class="level">尚未判斷</div>
+    <nav class="tabs" aria-label="功能選擇">
+      <button id="measureTab" class="tab active" type="button">測量音高</button>
+      <button id="tunerTab" class="tab" type="button">樂器調音</button>
+    </nav>
+
+    <section id="measurePanel" class="panel">
+      <div class="heroCard">
+        <div class="label">目前頻率</div>
+        <div id="frequency" class="frequency">-- <span>Hz</span></div>
+        <div id="note" class="note">等待聲音</div>
+        <div class="pitchState">
+          <span id="direction" class="direction">●</span>
+          <strong id="level">尚未判斷</strong>
+        </div>
+      </div>
+
+      <div class="summary" aria-label="測量紀錄">
+        <div><small>最低</small><strong id="minFreq">--</strong><span>Hz</span></div>
+        <div><small>平均</small><strong id="avgFreq">--</strong><span>Hz</span></div>
+        <div><small>最高</small><strong id="maxFreq">--</strong><span>Hz</span></div>
+      </div>
     </section>
 
-    <section class="summary" aria-label="測量紀錄">
-      <div><small>最低</small><strong id="minFreq">--</strong><span>Hz</span></div>
-      <div><small>平均</small><strong id="avgFreq">--</strong><span>Hz</span></div>
-      <div><small>最高</small><strong id="maxFreq">--</strong><span>Hz</span></div>
+    <section id="tunerPanel" class="panel hidden">
+      <div class="tunerCard">
+        <div class="label">最接近的音</div>
+        <div id="tunerNote" class="tunerNote">--</div>
+        <div id="tunerSolfege" class="tunerSolfege">等待聲音</div>
+
+        <div class="gauge" aria-label="調音指示">
+          <div class="gaugeLabels">
+            <span>太低</span><span>準確</span><span>太高</span>
+          </div>
+          <div class="gaugeTrack">
+            <div class="centerMark"></div>
+            <div id="needle" class="needle"></div>
+          </div>
+        </div>
+
+        <div id="tuneMessage" class="tuneMessage neutral">請發出持續的單一聲音</div>
+        <div class="tunerDetails">
+          <span>目前：<strong id="tunerFreq">-- Hz</strong></span>
+          <span>目標：<strong id="targetFreq">-- Hz</strong></span>
+        </div>
+      </div>
+
+      <div class="referenceSetting">
+        <label for="a4Select">標準音 A4</label>
+        <select id="a4Select">
+          <option value="440" selected>440 Hz（一般標準）</option>
+          <option value="442">442 Hz</option>
+          <option value="438">438 Hz</option>
+        </select>
+      </div>
     </section>
 
     <section class="controls">
-      <button id="startBtn" class="primary">開始測量</button>
-      <button id="stopBtn" disabled>停止</button>
-      <button id="resetBtn">清除</button>
+      <button id="startBtn" class="primary" type="button">開始</button>
+      <button id="stopBtn" type="button" disabled>停止</button>
+      <button id="resetBtn" type="button">清除</button>
     </section>
 
-    <p class="tip">請靠近樂器，發出單一且持續的聲音。教室太吵時，數字可能跳動。</p>
+    <aside class="tip">
+      <strong>使用小提醒</strong>
+      <span>靠近樂器，發出一個持續且清楚的聲音。環境太吵時，數字可能跳動。</span>
+    </aside>
   </main>
 
   <script src="app.js"></script>
