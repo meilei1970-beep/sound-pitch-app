@@ -1,0 +1,86 @@
+* { box-sizing: border-box; }
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", "PingFang TC", sans-serif;
+  color: #172033;
+  background: #f5f7fb;
+}
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: max(18px, env(safe-area-inset-top)) 18px max(18px, env(safe-area-inset-bottom));
+}
+.app {
+  width: min(720px, 100%);
+  background: white;
+  border-radius: 28px;
+  padding: 28px;
+  box-shadow: 0 16px 45px rgba(25, 40, 70, .12);
+}
+header { text-align: center; }
+h1 { margin: 0 0 8px; font-size: clamp(28px, 5vw, 42px); }
+header p { margin: 0; color: #637083; font-size: 17px; }
+.meter {
+  text-align: center;
+  margin: 28px 0 20px;
+  padding: 28px 16px;
+  border-radius: 24px;
+  background: #f7f9fc;
+}
+.frequency {
+  font-size: clamp(64px, 14vw, 112px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -3px;
+}
+.frequency span { font-size: .28em; letter-spacing: 0; color: #637083; }
+.note { margin-top: 12px; font-size: clamp(30px, 7vw, 52px); font-weight: 750; }
+.direction { margin-top: 8px; font-size: 42px; line-height: 1; }
+.level { margin-top: 7px; font-size: 20px; font-weight: 700; }
+.summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.summary div {
+  text-align: center;
+  border: 1px solid #e5e9f0;
+  border-radius: 18px;
+  padding: 14px 8px;
+}
+.summary small { display: block; color: #6d7889; font-size: 15px; }
+.summary strong { display: block; margin-top: 4px; font-size: 25px; }
+.summary span { color: #6d7889; font-size: 13px; }
+.controls {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 12px;
+}
+button {
+  appearance: none;
+  border: 0;
+  border-radius: 16px;
+  padding: 17px 14px;
+  font-size: 19px;
+  font-weight: 750;
+  background: #e9edf4;
+  color: #1e293b;
+  touch-action: manipulation;
+}
+button.primary { background: #2563eb; color: white; }
+button:disabled { opacity: .45; }
+.tip {
+  text-align: center;
+  color: #687386;
+  font-size: 15px;
+  line-height: 1.55;
+  margin: 18px 4px 0;
+}
+@media (max-width: 520px) {
+  .app { padding: 22px 16px; border-radius: 22px; }
+  .controls { grid-template-columns: 1fr 1fr; }
+  .controls .primary { grid-column: 1 / -1; }
+}

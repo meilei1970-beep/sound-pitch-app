@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffffff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="聲音高低" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <link rel="stylesheet" href="style.css" />
+  <title>聲音高低測量器</title>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <h1>聲音高低測量器</h1>
+      <p id="status">按「開始測量」，再發出一個持續的聲音</p>
+    </header>
+
+    <section class="meter" aria-live="polite">
+      <div id="frequency" class="frequency">-- <span>Hz</span></div>
+      <div id="note" class="note">等待聲音</div>
+      <div id="direction" class="direction">●</div>
+      <div id="level" class="level">尚未判斷</div>
+    </section>
+
+    <section class="summary" aria-label="測量紀錄">
+      <div><small>最低</small><strong id="minFreq">--</strong><span>Hz</span></div>
+      <div><small>平均</small><strong id="avgFreq">--</strong><span>Hz</span></div>
+      <div><small>最高</small><strong id="maxFreq">--</strong><span>Hz</span></div>
+    </section>
+
+    <section class="controls">
+      <button id="startBtn" class="primary">開始測量</button>
+      <button id="stopBtn" disabled>停止</button>
+      <button id="resetBtn">清除</button>
+    </section>
+
+    <p class="tip">請靠近樂器，發出單一且持續的聲音。教室太吵時，數字可能跳動。</p>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
